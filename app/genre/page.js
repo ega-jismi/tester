@@ -1,6 +1,6 @@
 // 📁 app/page.js
 
-import GenreList from '../components/GenreList'; // <-- IMPOR KOMPONEN
+import GenreList from '../../components/GenreList'; // <-- IMPOR KOMPONEN
 
 // Asumsikan kode UI Rekomendasi ada di dalam fungsi HomePage
 export default function HomePage() {
