@@ -2,13 +2,23 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import useStore from "../../store/store";
-import { books } from "../../lib/mock"; 
+import { books } from "../../lib/mock";
 import BookCard from "../../components/BookCard";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiTrash2, FiCreditCard, FiCheckCircle, FiAlertCircle, FiShoppingCart, FiMinus, FiPlus, FiShield, FiTruck } from "react-icons/fi";
+import { 
+  FiTrash2, 
+  FiCreditCard, 
+  FiCheckCircle, 
+  FiAlertCircle, 
+  FiShoppingCart, 
+  FiMinus, 
+  FiPlus, 
+  FiShield, 
+  FiTruck 
+} from "react-icons/fi";
+import useStore from "../../store/store";
 
-// --- UPDATE DATA PEMBAYARAN (Gabungan Data & Style) ---
+// --- DATA PEMBAYARAN ---
 const paymentMethods = [
   { id: "bca", name: "BCA", type: "bank", color: "bg-blue-600" },
   { id: "bni", name: "BNI", type: "bank", color: "bg-orange-500" },
@@ -19,32 +29,37 @@ const paymentMethods = [
 
 export default function Cart() {
   const router = useRouter();
+  
+  // --- STATE DARI ZUSTAND STORE ---
   const cart = useStore((s) => s.cart);
   const remove = useStore((s) => s.removeFromCart);
   const clearCart = useStore((s) => s.clearCart);
-  
   const add = useStore((s) => s.addToCart);
   const decrease = useStore((s) => s.decreaseQty);
+  const isLoggedIn = useStore((s) => s.isLoggedIn); // Status login global
 
+  // --- STATE LOKAL ---
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState(paymentMethods[0].id);
 
-  // --- STATE PEMBAYARAN AKTIF ---
-  const [selectedPayment, setSelectedPayment] = useState(paymentMethods[0].id); // Default BCA
-
+  // --- STATE VOUCHER ---
   const [voucherCode, setVoucherCode] = useState("");
   const [discount, setDiscount] = useState(0);
   const [voucherMessage, setVoucherMessage] = useState({ type: "", text: "" });
 
+  // --- KALKULASI HARGA ---
   const subTotal = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
   const grandTotal = subTotal - discount;
 
+  // --- REKOMENDASI BUKU (Cross-selling) ---
   const recommendations = books
     .filter(b => !cart.find(c => c.id === b.id))
     .slice(0, 4);
 
+  // --- LOGIKA VOUCHER ---
   const handleApplyVoucher = () => {
     if (!voucherCode) return;
     if (voucherCode.toUpperCase() === "BLOOM50") {
@@ -61,25 +76,56 @@ export default function Cart() {
     }
   };
 
+  // --- TOMBOL CHECKOUT (Validasi Login) ---
   const handleCheckout = () => {
-    const hasToken = document.cookie.includes("token=");
-    if (!hasToken) {
+    if (!isLoggedIn) {
       setShowLoginModal(true);
     } else {
       setShowPaymentModal(true);
     }
   };
 
-  const handlePay = () => {
+  // --- PROSES BAYAR (Kirim ke API Database) ---
+  const handlePay = async () => {
     setIsProcessing(true);
-    setTimeout(() => { setIsProcessing(false); setIsSuccess(true); clearCart(); }, 2000);
+
+    try {
+      // Kirim data pesanan ke API checkout yang sudah dibuat
+      const response = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: cart,
+          total: grandTotal,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setIsSuccess(true);
+        clearCart(); // Kosongkan keranjang setelah sukses
+      } else {
+        alert("Gagal memproses pesanan: " + result.error);
+        setShowPaymentModal(false);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Terjadi kesalahan jaringan.");
+      setShowPaymentModal(false);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const closePaymentModal = () => {
-    setShowPaymentModal(false); setIsSuccess(false); setIsProcessing(false); setDiscount(0); setVoucherCode("");
+    setShowPaymentModal(false);
+    setIsSuccess(false);
+    setIsProcessing(false);
+    setDiscount(0);
+    setVoucherCode("");
   };
 
-  // Cari nama metode pembayaran yang sedang dipilih
   const activePaymentName = paymentMethods.find(p => p.id === selectedPayment)?.name;
 
   return (
@@ -161,14 +207,14 @@ export default function Cart() {
                    <FiCreditCard /> Bayar Sekarang
                 </button>
 
-                {/* --- METODE PEMBAYARAN (DAPAT DIKLIK) --- */}
+                {/* --- METODE PEMBAYARAN --- */}
                 <div>
                    <p className="text-xs text-center text-slate-400 mb-3">Pilih Metode Pembayaran:</p>
                    <div className="flex justify-center gap-2 flex-wrap">
                       {paymentMethods.map((m) => (
                          <button 
                             key={m.id} 
-                            onClick={() => setSelectedPayment(m.id)} // Set State saat diklik
+                            onClick={() => setSelectedPayment(m.id)} 
                             className={`px-3 py-1.5 rounded-lg text-[10px] font-bold text-white transition-all transform active:scale-95 border-2 
                                 ${m.color} 
                                 ${selectedPayment === m.id ? "ring-2 ring-offset-2 ring-bookBlue border-white scale-110" : "border-transparent opacity-70 hover:opacity-100"}`
@@ -179,7 +225,6 @@ export default function Cart() {
                       ))}
                    </div>
                 </div>
-                {/* ----------------------------------------- */}
 
              </div>
           </div>
@@ -214,7 +259,7 @@ export default function Cart() {
         )}
       </AnimatePresence>
 
-      {/* MODAL PEMBAYARAN SUKSES */}
+      {/* MODAL PEMBAYARAN SUKSES / CONFIRMATION */}
       <AnimatePresence>
         {showPaymentModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/80 backdrop-blur-sm">
@@ -228,7 +273,6 @@ export default function Cart() {
                   <>
                     <p className="mb-2 text-sm text-gray-500 text-center">Metode yang kamu pilih:</p>
                     
-                    {/* TAMPILKAN METODE YANG DIPILIH */}
                     <div className={`mx-auto w-fit px-6 py-3 rounded-xl text-white font-bold text-xl mb-6 ${paymentMethods.find(p => p.id === selectedPayment)?.color}`}>
                        {activePaymentName}
                     </div>

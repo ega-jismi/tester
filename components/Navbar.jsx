@@ -31,11 +31,14 @@ export default function Navbar() {
    const setLoggedIn = useStore((s) => s.setLoggedIn);
     console.log ({session})
    useEffect(() => {
-      if(session?.session?.token){
+      // Jika session ada dan memiliki user, set true
+      if (session?.user) {
          setLoggedIn(true);
+      } else if (!isPending && !session) {
+         // Jika tidak loading dan session kosong, pastikan set false
+         setLoggedIn(false);
       }
-      
-   }, [setLoggedIn,session]);
+   }, [session, isPending, setLoggedIn]);
    
    const handleLogout = async () => {
       await authClient.signOut();
