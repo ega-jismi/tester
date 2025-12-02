@@ -1,19 +1,25 @@
 "use client";
 
+import { use } from "react"; // 1. IMPORT USE DARI REACT
 import { articles } from "../../../lib/mock"; 
 import Link from "next/link";
 import { motion } from "framer-motion";
 
 export default function BlogDetail({ params }) {
-  // Cari artikel berdasarkan ID
-  const article = articles.find((a) => a.id == params.id);
+  // 2. UNWRAP PARAMS MENGGUNAKAN USE()
+  // Karena params adalah Promise, kita harus menyelesaikannya dulu
+  const resolvedParams = use(params);
+  const id = resolvedParams.id;
 
-  // Tampilan jika artikel tidak ditemukan di database
+  // 3. Cari artikel berdasarkan ID (pastikan tipe data cocok menggunakan ==)
+  const article = articles.find((a) => a.id == id);
+
+  // Tampilan jika artikel tidak ditemukan
   if (!article) {
     return (
         <div className="min-h-[60vh] flex flex-col items-center justify-center text-center p-4">
             <h1 className="text-4xl font-serif font-bold text-slate-800 dark:text-white mb-4">404</h1>
-            <p className="text-gray-500 mb-6">Artikel tidak ditemukan di database.</p>
+            <p className="text-gray-500 mb-6">Artikel tidak ditemukan.</p>
             <Link href="/" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                 Kembali ke Beranda
             </Link>
