@@ -127,7 +127,7 @@ console.log({error})
         />
         <div className="relative z-10 flex flex-col justify-between h-full p-12 text-white">
             <div className="flex items-center gap-2">
-                <img src="/logo-putih.png" alt="Logo" className="h-8 w-auto opacity-80" />
+                <img src="/images/logo-putih.png" alt="Logo" className="h-8 w-auto opacity-80" />
             </div>
             <div className="mb-10">
                 <h2 className="text-4xl font-serif font-bold mb-4 leading-tight">
@@ -149,8 +149,8 @@ console.log({error})
 
         <div className="max-w-md w-full py-10">
             <div className="text-center mb-8">
-                <img src="/logo-hitam.png" alt="Paper Bloom" className="h-100 mx-auto mb-20 dark:hidden" />
-                <img src="/logo-putih.png" alt="Paper Bloom" className="h-100 mx-auto mb-20 hidden dark:block" />
+                <img src="/images/logo-hitam.png" alt="Paper Bloom" className="h-100 mx-auto mb-20 dark:hidden" />
+                <img src="/images/logo-putih.png" alt="Paper Bloom" className="h-100 mx-auto mb-20 hidden dark:block" />
                 
                 <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
                     {isLoginMode ? 'Selamat Datang Kembali' : 'Buat Akun Baru'}

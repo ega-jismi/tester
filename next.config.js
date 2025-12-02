@@ -7,7 +7,7 @@ const nextConfig = {
     //     hostname: "images.unsplash.com",
     //   },
     // ],
-    unoptimized: true
+    unoptimized: true,
   },
   allowedDevOrigins: ["local.factiven.me"],
 };

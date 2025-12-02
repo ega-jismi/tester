@@ -61,8 +61,8 @@ export default function Navbar() {
          <div className="container flex items-center justify-between py-3">
             
             <Link href="/" className="flex items-center gap-3 group">
-               <img src="/logo-hitam.png" alt="Paperbloom Logo" className="h-100 w-auto md:h-20 object-contain transition-transform group-hover:scale-105 dark:hidden" />
-               <img src="/logo-putih.png" alt="Paperbloom Logo Dark" className="h-100 w-auto md:h-20 object-contain transition-transform group-hover:scale-105 hidden dark:block" />
+               <img src="/images/logo-hitam.png" alt="Paperbloom Logo" className="h-100 w-auto md:h-20 object-contain transition-transform group-hover:scale-105 dark:hidden" />
+               <img src="/images/logo-putih.png" alt="Paperbloom Logo Dark" className="h-100 w-auto md:h-20 object-contain transition-transform group-hover:scale-105 hidden dark:block" />
             </Link>
 
             <form onSubmit={onSearch} className="hidden md:block flex-1 mx-8 max-w-lg">

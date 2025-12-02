@@ -12,6 +12,10 @@ export async function proxy(request) {
   // 2. Cek apakah user sedang berada di halaman Login
   const isLoginPage = request.nextUrl.pathname.startsWith("/auth/login");
 
+  if (request.nextUrl.pathname.startsWith("/images")) {
+    return NextResponse.next();
+  }
+
   // SKENARIO A: User belum login, tapi mencoba masuk ke halaman selain login
   // Kita paksa pindah ke /auth/login
   if (!hasToken && !isLoginPage) {
@@ -37,6 +41,6 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      */
-    "/((?!api|_next/static|_next/image|favicon.ico).*)",
+    '/((?!api|_next/static|_next/images|favicon.ico|sitemap.xml|robots.txt).*)',
   ],
 };
