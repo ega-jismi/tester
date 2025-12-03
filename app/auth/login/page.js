@@ -143,9 +143,6 @@ console.log({error})
 
       {/* BAGIAN KANAN: FORM DINAMIS */}
       <div className="w-full md:w-1/2 flex items-center justify-center p-8 md:p-16 relative overflow-y-auto">
-        <Link href="/" className="absolute top-6 left-6 text-sm text-slate-500 hover:text-bookBlue flex items-center gap-2 transition-colors">
-            ← Kembali ke Beranda
-        </Link>
 
         <div className="max-w-md w-full py-10">
             <div className="text-center mb-8">
