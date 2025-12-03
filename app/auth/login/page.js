@@ -25,80 +25,53 @@ export default function AuthPage() {
   // --- LOGIKA SUBMIT (Satu fungsi untuk keduanya) ---
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true); // Tampilkan loading saat submit
     
-    // Validasi Khusus Register
-    if (!isLoginMode) {
-        if (password !== confirmPass) {
-            alert("Password konfirmasi tidak cocok!");
-            return;
-        }
-        if (!name) {
-            alert("Nama harus diisi!");
-            return;
-        }
-        const { data, error } = await authClient.signUp.email({
-        email, // user email address
-        password, // user password -> min 8 characters by default
-        name, // user display name, // User image URL (optional)
-        callbackURL: "/" // A URL to redirect to after the user verifies their email (optional)
-    }, {
-        onRequest: (ctx) => {
-            //show loading
-        },
-        onSuccess: (ctx) => {
-            router.push("/")
-            //redirect to the dashboard or sign in page
-        },
-        onError: (ctx) => {
-            // display the error message
-            alert(ctx.error.message);
-        },
-});
-console.log({error})
-    }else{
-        const { data, error } = await authClient.signIn.email({
-        /**
-         * The user email
-         */
-        email,
-        /**
-         * The user password
-         */
-        password,
-        /**
-         * A URL to redirect to after the user verifies their email (optional)
-         */
-        callbackURL: "/",
-        /**
-         * remember the user session after the browser is closed. 
-         * @default true
-         */
-        rememberMe: false
-}, {
-    onSuccess: (ctx) => {
-            router.push("/")
-            //redirect to the dashboard or sign in page
-        },
-    //callbacks
-})
-    console.log({data,error})
-    }
-    
-    // setIsLoading(true);
-    
-    // // Simulasi Proses Server
-    // setTimeout(() => {
-    //   // 1. Simpan Token
-    //   document.cookie = "token=token-palsu-bebas; path=/; max-age=86400"; 
-      
-    //   // 2. Update Global Store (Agar Navbar berubah)
-    //   setLoggedIn(true); 
-    //   window.dispatchEvent(new Event("auth-change"));
+    try {
+        if (!isLoginMode) {
+            // REGISTER
+            if (password !== confirmPass) {
+                alert("Password konfirmasi tidak cocok!");
+                setIsLoading(false);
+                return;
+            }
+            if (!name) {
+                alert("Nama harus diisi!");
+                setIsLoading(false);
+                return;
+            }
+            const { data, error } = await authClient.signUp.email({
+                email, 
+                password, 
+                name, 
+                callbackURL: "/" 
+            });
 
-    //   // 3. Pindah ke Home
-    //   router.push('/'); 
-    //   setIsLoading(false);
-    // }, 1500);
+            if (error) {
+                alert(error.message);
+            } else {
+                router.push("/");
+            }
+        } else {
+            // LOGIN
+            const { data, error } = await authClient.signIn.email({
+                email,
+                password,
+                callbackURL: "/",
+                rememberMe: false
+            });
+
+            if (error) {
+                alert(error.message); // Tampilkan error jika login gagal
+            } else {
+                router.push("/");
+            }
+        }
+    } catch (err) {
+        console.error("Terjadi kesalahan:", err);
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   // Fungsi Ganti Mode
@@ -143,6 +116,9 @@ console.log({error})
 
       {/* BAGIAN KANAN: FORM DINAMIS */}
       <div className="w-full md:w-1/2 flex items-center justify-center p-8 md:p-16 relative overflow-y-auto">
+        <Link href="/" className="absolute top-6 left-6 text-sm text-slate-500 hover:text-bookBlue flex items-center gap-2 transition-colors">
+            ← Kembali ke Beranda
+        </Link>
 
         <div className="max-w-md w-full py-10">
             <div className="text-center mb-8">
@@ -190,7 +166,12 @@ console.log({error})
                 <div className="space-y-1">
                     <div className="flex justify-between">
                         <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Password</label>
-                        {isLoginMode && <a href="#" className="text-xs text-bookBlue hover:underline">Lupa Password?</a>}
+                        {/* LINK LUPA PASSWORD DITAMBAHKAN DI SINI */}
+                        {isLoginMode && (
+                            <Link href="/auth/forgot-password" className="text-xs text-bookBlue hover:underline">
+                                Lupa Password?
+                            </Link>
+                        )}
                     </div>
                     <div className="relative">
                         <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"><FiLock /></div>

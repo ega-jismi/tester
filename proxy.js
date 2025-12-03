@@ -3,35 +3,34 @@ import { headers } from "next/headers";
 import { auth } from "./lib/auth";
 
 export async function proxy(request) {
-  // 1. Cek apakah user punya cookie 'token' (tanda sudah login)
-  // Nanti saat login berhasil, kita harus simpan cookie ini.
+  // 1. Cek session user
   const hasToken = await auth.api.getSession({
         headers: await headers()
     })
 
-  // 2. Cek apakah user sedang berada di halaman Login
-  const isLoginPage = request.nextUrl.pathname.startsWith("/auth/login");
+  // 2. Cek apakah user sedang berada di halaman Authentication (Login, Register, Lupa Password)
+  // Perubahan: Menggunakan startsWith("/auth") agar mencakup semua halaman auth
+  const isAuthPage = request.nextUrl.pathname.startsWith("/auth");
 
   if (request.nextUrl.pathname.startsWith("/images")) {
     return NextResponse.next();
   }
 
-  // SKENARIO A: User belum login, tapi mencoba masuk ke halaman selain login
-  // Kita paksa pindah ke /auth/login
-  if (!hasToken && !isLoginPage) {
+  // SKENARIO A: User BELUM login, tapi mencoba masuk ke halaman SELAIN auth
+  // (Misal: User mau ke /profile atau /orders tapi belum login) -> Lempar ke Login
+  if (!hasToken && !isAuthPage) {
     return NextResponse.redirect(new URL("/auth/login", request.url));
   }
 
-  // SKENARIO B: User sudah login, tapi mencoba buka halaman login lagi
-  // Kita paksa pindah ke halaman utama (Dashboard/Home)
-  if (hasToken && isLoginPage) {
+  // SKENARIO B: User SUDAH login, tapi mencoba buka halaman AUTH lagi
+  // (Misal: User sudah login tapi iseng buka /auth/login atau /auth/forgot-password) -> Lempar ke Home
+  if (hasToken && isAuthPage) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
   return NextResponse.next();
 }
 
-// Tentukan halaman mana saja yang dijaga oleh middleware ini
 export const config = {
   matcher: [
     /*
