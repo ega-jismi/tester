@@ -4,17 +4,23 @@ import { useState } from "react";
 import { authClient } from "../../../lib/auth-client";
 import { useRouter } from "next/navigation";
 import { FiLock, FiCheckCircle } from "react-icons/fi";
-import { useSearchParams } from 'next/navigation'
-
-export default function ResetPassword() {
-    const searchParams = useSearchParams()
+import { use } from "react";
  
-  const token = searchParams.get('token')
+
+export default function ResetPassword({
+  searchParams,
+}
+) {
+
+  const params = use(searchParams);
+  
+ 
+  const token = params.token
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [confirmPass, setConfirmPass] = useState("");
   const [loading, setLoading] = useState(false);
-
+console.log(token)
   const handleReset = async (e) => {
     e.preventDefault();
     if (password !== confirmPass) {
