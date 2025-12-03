@@ -23,16 +23,21 @@ export default function Detail({ params }) {
   const [reviewList, setReviewList] = useState([]);
   const [related, setRelated] = useState([]);
 
+  // Unwrap params menggunakan use() untuk Next.js 15
   const par = use(params);
 
   useEffect(() => {
     const fetchBook = async () => {
       setLoading(true);
+      // Mengambil data detail buku dari API
       const response = await fetch(`/api/books/${par.id}`);
       const data = await response.json();
-      setBook(data.data.book);
-      setReviewList(data.data.reviews);
-      setRelated(data.data.related?.slice(0, 4));
+      
+      if (data.success) {
+        setBook(data.data.book);
+        setReviewList(data.data.reviews);
+        setRelated(data.data.related?.slice(0, 4));
+      }
       setLoading(false);
     };
     fetchBook();
@@ -46,14 +51,12 @@ export default function Detail({ params }) {
   const [rating, setRating] = useState(5);
   const [qty, setQty] = useState(1);
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <div className="p-10 text-center">Loading...</div>;
 
   if (!book)
     return (
       <div className="p-10 text-center text-gray-500">Buku tidak ditemukan</div>
     );
-
-  //   const related = books.filter((b) => b.id !== book.id).slice(0, 4);
 
   // Logika Harga
   const originalPrice = Number(book.price) || 0;
@@ -82,6 +85,20 @@ export default function Detail({ params }) {
     for (let i = 0; i < qty; i++) {
       addToCart({ ...book, price: finalPrice });
     }
+  };
+
+  // Helper untuk menampilkan bintang (Array 5 elemen)
+  const renderStars = (count) => {
+    return (
+      <div className="flex text-yellow-400 text-sm">
+        {[...Array(5)].map((_, i) => (
+          <FiStar
+            key={i}
+            className={i < count ? "fill-current" : "text-gray-300 dark:text-gray-600"}
+          />
+        ))}
+      </div>
+    );
   };
 
   return (
@@ -137,9 +154,9 @@ export default function Detail({ params }) {
               Oleh:{" "}
               <span className="text-bookBlue font-semibold">{book.author}</span>
             </span>
-            <div className="flex items-center text-yellow-400">
+            <div className="flex items-center text-yellow-400 gap-1">
               <FiStar className="fill-current" /> 4.8{" "}
-              <span className="text-slate-400 ml-1">(20 Ulasan)</span>
+              <span className="text-slate-400 ml-1 text-xs text-black dark:text-white">({reviewList.length} Ulasan)</span>
             </div>
           </div>
 
@@ -213,7 +230,7 @@ export default function Detail({ params }) {
             </div>
           </div>
 
-          {/* DETAIL SPESIFIKASI (DINAMIS) */}
+          {/* DETAIL SPESIFIKASI */}
           <div className="mb-8">
             <h3 className="text-lg font-serif font-bold text-slate-900 dark:text-white mb-4 border-b border-slate-200 dark:border-slate-700 pb-2">
               Deskripsi & Spesifikasi
@@ -222,7 +239,6 @@ export default function Detail({ params }) {
               {book.description}
             </p>
 
-            {/* --- BAGIAN INI YANG SUDAH DIPERBAIKI --- */}
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
                 <span className="block text-slate-400 text-xs uppercase">
@@ -257,7 +273,6 @@ export default function Detail({ params }) {
                 </span>
               </div>
             </div>
-            {/* ---------------------------------------- */}
           </div>
         </motion.div>
       </div>
@@ -281,9 +296,8 @@ export default function Detail({ params }) {
                     <div className="font-bold text-slate-900 dark:text-white">
                       {r.user}
                     </div>
-                    <div className="flex text-yellow-400 text-xs">
-                      {"★".repeat(r.rating)}
-                    </div>
+                    {/* Menggunakan Helper renderStars */}
+                    {renderStars(r.rating)}
                   </div>
                   <p className="text-slate-600 dark:text-slate-300 text-sm">
                     "{r.text}"
@@ -309,19 +323,22 @@ export default function Detail({ params }) {
               placeholder="Nama Anda"
               className="w-full px-4 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 outline-none focus:border-bookBlue transition-all"
             />
-            <div className="flex gap-2">
+            {/* Pilihan Rating dengan Bintang yang bisa diklik */}
+            <div className="flex gap-1">
               {[1, 2, 3, 4, 5].map((num) => (
                 <button
                   key={num}
                   type="button"
                   onClick={() => setRating(num)}
-                  className={`w-8 h-8 rounded-lg font-bold border ${
-                    rating === num
-                      ? "bg-yellow-400 border-yellow-400 text-white"
-                      : "border-slate-300 text-slate-400"
-                  }`}
+                  className="p-1 transition-transform hover:scale-110"
                 >
-                  {num}
+                  <FiStar
+                    className={`w-8 h-8 ${
+                      rating >= num
+                        ? "fill-yellow-400 text-yellow-400"
+                        : "text-slate-300 dark:text-slate-600"
+                    }`}
+                  />
                 </button>
               ))}
             </div>
