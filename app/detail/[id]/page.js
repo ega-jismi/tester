@@ -5,6 +5,7 @@ import Link from "next/link";
 import { books, reviews } from "../../../lib/mock"; // Path mundur 3x
 import BookCard from "../../../components/BookCard"; // Path mundur 3x
 import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
 import {
   FiShoppingCart,
   FiHeart,
@@ -82,6 +83,10 @@ export default function Detail({ params }) {
   };
 
   const handleAdd = () => {
+    if (!isLoggedIn) {
+      setShowLoginModal(true);
+      return;
+    }
     for (let i = 0; i < qty; i++) {
       addToCart({ ...book, price: finalPrice });
     }

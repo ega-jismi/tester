@@ -18,9 +18,9 @@ export async function proxy(request) {
 
   // SKENARIO A: User BELUM login, tapi mencoba masuk ke halaman SELAIN auth
   // (Misal: User mau ke /profile atau /orders tapi belum login) -> Lempar ke Login
-  if (!hasToken && !isAuthPage) {
-    return NextResponse.redirect(new URL("/auth/login", request.url));
-  }
+  //if (!hasToken && !isAuthPage) {
+    //return NextResponse.redirect(new URL("/auth/login", request.url));
+  //}
 
   // SKENARIO B: User SUDAH login, tapi mencoba buka halaman AUTH lagi
   // (Misal: User sudah login tapi iseng buka /auth/login atau /auth/forgot-password) -> Lempar ke Home
