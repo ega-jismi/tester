@@ -40,3 +40,47 @@ body {
 .dark ::-webkit-scrollbar-thumb:hover {
   background: #475569; 
 }
+
+/* === PRINT STYLES === */
+@media print {
+  /* 1. Sembunyikan elemen yang tidak perlu */
+  header, footer, nav, button, a {
+    display: none !important;
+  }
+
+  /* 2. Reset Layout Halaman */
+  body {
+    background: white;
+    color: black;
+    font-size: 12pt;
+  }
+
+  main {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+  }
+
+  /* 3. Atur Kontainer Invoice agar Full Width & Bersih */
+  section {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  /* Hilangkan background abu-abu di card */
+  .bg-white, .dark\:bg-slate-800 {
+    background-color: white !important;
+    color: black !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  /* Pastikan logo atau gambar tercetak */
+  img {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
