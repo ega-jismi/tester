@@ -2,9 +2,8 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { books, reviews } from "../../../lib/mock"; // Path mundur 3x
-import BookCard from "../../../components/BookCard"; // Path mundur 3x
-import { motion } from "framer-motion";
+import BookCard from "../../../components/BookCard";
+import { motion, AnimatePresence } from "framer-motion"; // Import AnimatePresence untuk Modal
 import { useRouter } from "next/navigation";
 import {
   FiShoppingCart,
@@ -16,38 +15,53 @@ import {
   FiPlus,
   FiStar,
 } from "react-icons/fi";
-import useStore from "../../../store/store"; // Path mundur 3x
+import useStore from "../../../store/store";
+import { authClient } from "../../../lib/auth-client"; // Import Auth Client
 
 export default function Detail({ params }) {
+  const router = useRouter();
+
+  // 1. Ambil Session User
+  const { data: session } = authClient.useSession();
+  const isLoggedIn = !!session?.user;
+
   const [loading, setLoading] = useState(true);
   const [book, setBook] = useState(null);
   const [reviewList, setReviewList] = useState([]);
   const [related, setRelated] = useState([]);
 
-  // Unwrap params menggunakan use() untuk Next.js 15
+  // State UI
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Unwrap params
   const par = use(params);
 
   useEffect(() => {
     const fetchBook = async () => {
       setLoading(true);
-      // Mengambil data detail buku dari API
-      const response = await fetch(`/api/books/${par.id}`);
-      const data = await response.json();
-      
-      if (data.success) {
-        setBook(data.data.book);
-        setReviewList(data.data.reviews);
-        setRelated(data.data.related?.slice(0, 4));
+      try {
+        const response = await fetch(`/api/books/${par.id}`);
+        const data = await response.json();
+
+        if (data.success) {
+          setBook(data.data.book);
+          // Urutkan review dari yang terbaru (opsional, tergantung API)
+          setReviewList(data.data.reviews || []);
+          setRelated(data.data.related?.slice(0, 4));
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     fetchBook();
   }, [par.id]);
 
   const addToCart = useStore((s) => s.addToCart);
 
-  // State Form & Quantity
-  const [name, setName] = useState("");
+  // State Form Review
   const [comment, setComment] = useState("");
   const [rating, setRating] = useState(5);
   const [qty, setQty] = useState(1);
@@ -67,19 +81,48 @@ export default function Detail({ params }) {
     ? originalPrice - (originalPrice * discount) / 100
     : originalPrice;
 
-  const handleSubmit = (e) => {
+  // --- LOGIKA BARU: SUBMIT ULASAN KE DATABASE ---
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name || !comment) return;
-    const newReview = {
-      id: Date.now(),
-      user: name,
-      rating: Number(rating),
-      text: comment,
-    };
-    setReviewList([newReview, ...reviewList]);
-    setName("");
-    setComment("");
-    setRating(5);
+
+    // 1. Cek Login di Frontend
+    if (!isLoggedIn) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    if (!comment) return;
+    setIsSubmitting(true);
+
+    try {
+      // 2. Kirim ke API
+      const res = await fetch("/api/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bookId: book.id,
+          rating: Number(rating),
+          text: comment,
+        }),
+      });
+
+      const json = await res.json();
+
+      if (res.ok) {
+        // 3. Update tampilan secara realtime (tanpa refresh)
+        setReviewList([json.data, ...reviewList]);
+        setComment("");
+        setRating(5);
+        alert("Ulasan berhasil dikirim!");
+      } else {
+        alert("Gagal: " + json.error);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Terjadi kesalahan jaringan.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleAdd = () => {
@@ -92,14 +135,15 @@ export default function Detail({ params }) {
     }
   };
 
-  // Helper untuk menampilkan bintang (Array 5 elemen)
   const renderStars = (count) => {
     return (
       <div className="flex text-yellow-400 text-sm">
         {[...Array(5)].map((_, i) => (
           <FiStar
             key={i}
-            className={i < count ? "fill-current" : "text-gray-300 dark:text-gray-600"}
+            className={
+              i < count ? "fill-current" : "text-gray-300 dark:text-gray-600"
+            }
           />
         ))}
       </div>
@@ -108,7 +152,45 @@ export default function Detail({ params }) {
 
   return (
     <section className="max-w-6xl mx-auto pb-10 px-4">
-      {/* BREADCRUMBS */}
+      {/* --- MODAL LOGIN (DICOBAKAN DARI BookCard) --- */}
+      <AnimatePresence>
+        {showLoginModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/70 backdrop-blur-sm">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white dark:bg-slate-900 p-6 rounded-2xl max-w-sm w-full text-center shadow-2xl border border-gray-200 dark:border-slate-700"
+            >
+              <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 text-bookBlue rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
+                🔒
+              </div>
+              <h3 className="text-xl font-bold mb-2 text-slate-900 dark:text-white">
+                Login Dulu Yuk!
+              </h3>
+              <p className="text-gray-500 dark:text-gray-400 mb-6 text-sm">
+                Kamu harus masuk akun untuk menulis ulasan atau belanja.
+              </p>
+              <div className="flex gap-3 justify-center">
+                <button
+                  onClick={() => setShowLoginModal(false)}
+                  className="px-4 py-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 font-medium"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={() => router.push("/auth/login")}
+                  className="px-6 py-2 bg-bookBlue text-white rounded-xl font-bold hover:bg-blue-600 transition-colors shadow-lg"
+                >
+                  Login Sekarang
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* BREADCRUMBS & CONTENT ATAS (Tetap Sama) */}
       <div className="text-sm text-slate-500 dark:text-slate-400 mb-6 flex items-center gap-2">
         <Link href="/" className="hover:text-bookBlue transition-colors">
           Home
@@ -124,7 +206,7 @@ export default function Detail({ params }) {
       </div>
 
       <div className="grid md:grid-cols-12 gap-8 lg:gap-12">
-        {/* KOLOM KIRI: GAMBAR */}
+        {/* GAMBAR */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -139,13 +221,12 @@ export default function Detail({ params }) {
           </div>
         </motion.div>
 
-        {/* KOLOM KANAN: DETAIL INFO */}
+        {/* DETAIL INFO */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           className="md:col-span-8 lg:col-span-8"
         >
-          {/* Judul & Penulis */}
           <div className="mb-1">
             <span className="bg-blue-100 dark:bg-blue-900/30 text-bookBlue dark:text-blue-300 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
               {book.tags?.[0] || "Buku"}
@@ -161,11 +242,12 @@ export default function Detail({ params }) {
             </span>
             <div className="flex items-center text-yellow-400 gap-1">
               <FiStar className="fill-current" /> 4.8{" "}
-              <span className="text-slate-400 ml-1 text-xs text-black dark:text-white">({reviewList.length} Ulasan)</span>
+              <span className="text-slate-400 ml-1 text-xs text-black dark:text-white">
+                ({reviewList.length} Ulasan)
+              </span>
             </div>
           </div>
 
-          {/* Harga */}
           <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 mb-8">
             <div className="flex items-end gap-3 mb-4">
               <div className="text-4xl font-bold text-bookOrange">
@@ -183,9 +265,7 @@ export default function Detail({ params }) {
               )}
             </div>
 
-            {/* Tombol Aksi */}
             <div className="flex flex-col sm:flex-row gap-4">
-              {/* Quantity Selector */}
               <div className="flex items-center border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-900 h-12 w-fit">
                 <button
                   onClick={() => setQty(Math.max(1, qty - 1))}
@@ -203,22 +283,17 @@ export default function Detail({ params }) {
                   <FiPlus />
                 </button>
               </div>
-
-              {/* Add to Cart */}
               <button
                 onClick={handleAdd}
                 className="flex-1 h-12 bg-bookBlue hover:bg-blue-900 text-white font-bold rounded-xl shadow-lg hover:shadow-blue-500/20 transition-all flex items-center justify-center gap-2"
               >
                 <FiShoppingCart className="w-5 h-5" /> Tambah Keranjang
               </button>
-
-              {/* Wishlist */}
               <button className="h-12 w-12 border border-slate-300 dark:border-slate-600 rounded-xl flex items-center justify-center text-slate-500 hover:text-red-500 hover:border-red-500 transition-colors">
                 <FiHeart className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Jaminan Layanan */}
             <div className="grid grid-cols-3 gap-2 mt-6 pt-6 border-t border-slate-200 dark:border-slate-700 text-xs md:text-sm text-slate-600 dark:text-slate-400">
               <div className="flex flex-col items-center gap-1 text-center">
                 <FiCheckCircle className="text-green-500 w-5 h-5" />{" "}
@@ -235,7 +310,6 @@ export default function Detail({ params }) {
             </div>
           </div>
 
-          {/* DETAIL SPESIFIKASI */}
           <div className="mb-8">
             <h3 className="text-lg font-serif font-bold text-slate-900 dark:text-white mb-4 border-b border-slate-200 dark:border-slate-700 pb-2">
               Deskripsi & Spesifikasi
@@ -243,7 +317,6 @@ export default function Detail({ params }) {
             <p className="text-slate-600 dark:text-slate-300 leading-relaxed mb-6">
               {book.description}
             </p>
-
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
                 <span className="block text-slate-400 text-xs uppercase">
@@ -301,7 +374,6 @@ export default function Detail({ params }) {
                     <div className="font-bold text-slate-900 dark:text-white">
                       {r.user}
                     </div>
-                    {/* Menggunakan Helper renderStars */}
                     {renderStars(r.rating)}
                   </div>
                   <p className="text-slate-600 dark:text-slate-300 text-sm">
@@ -310,7 +382,9 @@ export default function Detail({ params }) {
                 </div>
               ))
             ) : (
-              <p className="text-slate-500 italic">Belum ada ulasan.</p>
+              <p className="text-slate-500 italic">
+                Belum ada ulasan. Jadilah yang pertama!
+              </p>
             )}
           </div>
         </div>
@@ -319,53 +393,67 @@ export default function Detail({ params }) {
           <h3 className="text-lg font-bold mb-4 text-slate-900 dark:text-white">
             Tulis Ulasan
           </h3>
+
           <form onSubmit={handleSubmit} className="space-y-4">
-            <input
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Nama Anda"
-              className="w-full px-4 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 outline-none focus:border-bookBlue transition-all"
-            />
-            {/* Pilihan Rating dengan Bintang yang bisa diklik */}
+            {/* Input Nama Dihapus - Diganti Info Login */}
+            {isLoggedIn ? (
+              <div className="text-sm text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
+                Menulis sebagai:{" "}
+                <span className="font-bold text-bookBlue">
+                  {session.user.name}
+                </span>
+              </div>
+            ) : (
+              <div
+                onClick={() => setShowLoginModal(true)}
+                className="cursor-pointer text-sm text-red-500 bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-100 dark:border-red-900/30 flex items-center gap-2"
+              >
+                🔒 Silakan login untuk menulis ulasan
+              </div>
+            )}
+
             <div className="flex gap-1">
               {[1, 2, 3, 4, 5].map((num) => (
                 <button
                   key={num}
                   type="button"
                   onClick={() => setRating(num)}
-                  className="p-1 transition-transform hover:scale-110"
+                  disabled={!isLoggedIn}
+                  className="p-1 transition-transform hover:scale-110 disabled:opacity-50"
                 >
                   <FiStar
-                    className={`w-8 h-8 ${
-                      rating >= num
-                        ? "fill-yellow-400 text-yellow-400"
-                        : "text-slate-300 dark:text-slate-600"
-                    }`}
+                    className={`w-8 h-8 ${rating >= num ? "fill-yellow-400 text-yellow-400" : "text-slate-300 dark:text-slate-600"}`}
                   />
                 </button>
               ))}
             </div>
+
             <textarea
               required
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               rows="3"
-              placeholder="Pendapat Anda..."
-              className="w-full px-4 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 outline-none focus:border-bookBlue transition-all"
+              disabled={!isLoggedIn}
+              placeholder={
+                isLoggedIn
+                  ? "Bagaimana pendapat Anda tentang buku ini?"
+                  : "Login dulu untuk mengisi..."
+              }
+              className="w-full px-4 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 outline-none focus:border-bookBlue transition-all disabled:cursor-not-allowed"
             ></textarea>
+
             <button
               type="submit"
-              className="w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold rounded-xl hover:opacity-90 transition-all"
+              disabled={!isLoggedIn || isSubmitting}
+              className="w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold rounded-xl hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Kirim Ulasan
+              {isSubmitting ? "Mengirim..." : "Kirim Ulasan"}
             </button>
           </form>
         </div>
       </div>
 
-      {/* REKOMENDASI LAIN */}
+      {/* REKOMENDASI */}
       <div>
         <h3 className="text-2xl font-serif font-bold mb-6 text-slate-900 dark:text-white border-l-4 border-bookBlue pl-4">
           Mungkin Anda Suka
